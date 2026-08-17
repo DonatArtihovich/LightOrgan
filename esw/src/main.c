@@ -13,7 +13,7 @@ uint32_t adc_read(uint8_t ch);
 #define MIDI_SOP (0xAEAE) // Start of packet marker
 #define MIDI_EOP (0xEBEB) // End of packet marker
 
-uint8_t adc_channels[] = {0, 1, 2, 3, 4, 7};
+uint8_t adc_channels[] = {0, 1, 2, 3, 4, 6, 7};
 
 int main()
 {
@@ -22,7 +22,7 @@ int main()
     init_uart();
     init_adc();
 
-    uint16_t midi_buf[] = {0};
+    uint16_t midi_buf[sizeof(adc_channels) / sizeof(*adc_channels)] = {0};
 #if defined(UART_LOG_EN) && UART_LOG_EN
     char message[128] = {0};
 #endif
@@ -53,7 +53,7 @@ int main()
         uart_print("==============\n\r");
 #endif
         uart_send_midi_packet(midi_buf, sizeof(midi_buf) / sizeof(*midi_buf));
-        Delay_Ms(500);
+        Delay_Ms(800);
     }
 }
 
@@ -81,6 +81,11 @@ void uart_send_u16(uint16_t dword)
 
 void uart_send_midi_packet(uint16_t *midi_data, uint8_t len)
 {
+#if defined(UART_LOG_EN) && UART_LOG_EN
+    char msg[100] = {0};
+    snprintf(msg, sizeof(msg), "Sending MIDI packet with %d values\n\r", len);
+    uart_print(msg);
+#endif
     uart_send_u16(MIDI_SOP);
 
     for (int i = 0; i < len; i++)
@@ -100,7 +105,7 @@ void init_adc() {
 
     GPIOA->CFGLR &= ~((0xF << (2 * 4)) | (0xF << (1 * 4))); // A2, A1
     GPIOC->CFGLR &= ~(0xF << (4 * 4)); // C4
-    GPIOD->CFGLR &= ~(0xFFF << (2 * 4)); // D2 - D4
+    GPIOD->CFGLR &= ~(0xF0FFF << (2 * 4)); // D2 - D4, D6
 
     RCC->CFGR0 &= ~RCC_ADCPRE;
     RCC->CFGR0 |= RCC_ADCPRE_DIV6;
